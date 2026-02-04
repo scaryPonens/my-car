@@ -117,14 +117,14 @@ def get_auth_url(
         "control_security",
     ]
 
-    options = {
-        "scope": scope,
-        "force_prompt": force_prompt,
-    }
+    # Build options dict (state and force_prompt go here per SDK docs)
+    options: dict[str, Any] = {}
     if state:
         options["state"] = state
+    if force_prompt:
+        options["force_prompt"] = True
 
-    return client.get_auth_url(**options)
+    return client.get_auth_url(scope=scope, options=options if options else None)
 
 
 # =============================================================================

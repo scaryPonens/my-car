@@ -143,7 +143,6 @@ To get started, use /connect to link your car.
 """
     await update.message.reply_text(welcome_message)
 
-
 @log_command
 @require_user
 async def connect_handler(
