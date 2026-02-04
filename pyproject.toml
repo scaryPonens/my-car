@@ -1,0 +1,33 @@
+[project]
+name = "my-car"
+version = "0.1.0"
+description = "Smart Car Virtual Assistant"
+requires-python = ">=3.10"
+dependencies = [
+    # Web Framework
+    "fastapi>=0.109.2",
+    "uvicorn[standard]>=0.27.1",
+    # Telegram Bot
+    "python-telegram-bot>=20.8",
+    # Smartcar SDK
+    "smartcar>=6.19.1",
+    # Database (Supabase)
+    "supabase>=2.3.4",
+    # LLM Providers
+    "openai>=1.12.0",
+    "anthropic>=0.18.1",
+    # Settings Management
+    "pydantic>=2.6.1",
+    "pydantic-settings>=2.2.1",
+    # HTTP Client
+    "httpx>=0.26.0",
+    # Development
+    "python-dotenv>=1.0.1",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.1",
+    "pytest-asyncio>=0.23.4",
+    "pytest-cov>=7.0.0",
+]
