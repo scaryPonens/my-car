@@ -419,24 +419,6 @@ def generate_vehicle_summary(vehicle: Vehicle, data: VehicleData) -> str:
     if data.odometer:
         parts.append(f"Odometer: {data.odometer.distance:,.1f} km\n")
 
-    if data.location:
-        parts.append(
-            f"Location: {data.location.latitude:.6f}, "
-            f"{data.location.longitude:.6f}\n"
-        )
-
-    if data.tire_pressure:
-        tp = data.tire_pressure
-        parts.append("Tire Pressure (kPa):\n")
-        if tp.front_left:
-            parts.append(f"  Front Left: {tp.front_left:.0f}\n")
-        if tp.front_right:
-            parts.append(f"  Front Right: {tp.front_right:.0f}\n")
-        if tp.rear_left:
-            parts.append(f"  Rear Left: {tp.rear_left:.0f}\n")
-        if tp.rear_right:
-            parts.append(f"  Rear Right: {tp.rear_right:.0f}\n")
-
     return "".join(parts)
 
 

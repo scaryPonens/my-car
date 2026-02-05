@@ -288,13 +288,12 @@ async def help_handler(
 /start - Welcome message and introduction
 /connect - Connect a new vehicle via Smartcar
 /vehicles - List all your connected vehicles
-/status - Get current vehicle status (fuel, battery, odometer, location)
+/status - Get current vehicle status (fuel, battery, odometer)
 /help - Show this help message
 
 **Natural Language**
 You can also just type messages like:
 - "What's my fuel level?"
-- "Where is my car?"
 - "Lock my car"
 - "What's the battery status?"
 
@@ -451,13 +450,18 @@ async def _execute_action(
             return f"🔓 {vehicle.display_name} has been unlocked."
         return f"❌ Failed to unlock {vehicle.display_name}."
 
+    # Unsupported actions (location and tire pressure not available)
+    if action == LLMAction.GET_LOCATION:
+        return "📍 Location data is not currently available for this vehicle."
+
+    if action == LLMAction.GET_TIRE_PRESSURE:
+        return "🚗 Tire pressure data is not currently available for this vehicle."
+
     # Individual data actions
     if action in (
-        LLMAction.GET_LOCATION,
         LLMAction.GET_FUEL,
         LLMAction.GET_BATTERY,
         LLMAction.GET_ODOMETER,
-        LLMAction.GET_TIRE_PRESSURE,
     ):
         data = get_comprehensive_vehicle_data(
             vehicle.tokens.access_token,
@@ -476,13 +480,6 @@ def _format_specific_data(
     vehicle: Vehicle,
 ) -> str:
     """Format specific vehicle data based on action type."""
-    if action == LLMAction.GET_LOCATION and data.location:
-        return (
-            f"📍 {vehicle.display_name} location:\n"
-            f"Latitude: {data.location.latitude:.6f}\n"
-            f"Longitude: {data.location.longitude:.6f}"
-        )
-
     if action == LLMAction.GET_FUEL and data.fuel:
         result = f"⛽ {vehicle.display_name} fuel: {data.fuel.percent_remaining:.1f}%"
         if data.fuel.range:
@@ -497,16 +494,6 @@ def _format_specific_data(
 
     if action == LLMAction.GET_ODOMETER and data.odometer:
         return f"🛣️ {vehicle.display_name} odometer: {data.odometer.distance:,.1f} km"
-
-    if action == LLMAction.GET_TIRE_PRESSURE and data.tire_pressure:
-        tp = data.tire_pressure
-        return (
-            f"🚗 {vehicle.display_name} tire pressure (kPa):\n"
-            f"  Front Left: {tp.front_left or 'N/A'}\n"
-            f"  Front Right: {tp.front_right or 'N/A'}\n"
-            f"  Rear Left: {tp.rear_left or 'N/A'}\n"
-            f"  Rear Right: {tp.rear_right or 'N/A'}"
-        )
 
     return "Data not available for this vehicle."
 

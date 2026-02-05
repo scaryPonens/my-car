@@ -6,7 +6,7 @@ Uses safe API call wrappers for error handling.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import partial
 from typing import Any, Callable, Optional, TypeVar
 
@@ -14,12 +14,10 @@ import smartcar
 
 from config.settings import settings
 from models.schemas import (
-    TirePressure,
     Vehicle,
     VehicleBattery,
     VehicleData,
     VehicleFuel,
-    VehicleLocation,
     VehicleOdometer,
 )
 
@@ -59,7 +57,7 @@ def safe_api_call(
     def wrapper(*args: Any, **kwargs: Any) -> T:
         try:
             return func(*args, **kwargs)
-        except smartcar.exceptions.SmartcarException as e:
+        except smartcar.exception.SmartcarException as e:
             if log_error:
                 logger.warning(f"Smartcar API error in {func.__name__}: {e}")
             return default
@@ -109,11 +107,9 @@ def get_auth_url(
     # Define requested permissions
     scope = [
         "read_vehicle_info",
-        "read_location",
         "read_odometer",
         "read_fuel",
         "read_battery",
-        "read_tires",
         "control_security",
     ]
 
@@ -152,7 +148,7 @@ def exchange_code_for_tokens(code: str) -> Optional[dict[str, Any]]:
             "refresh_token": tokens.refresh_token,
             "expiration": datetime.utcnow() + timedelta(seconds=tokens.expires_in),
         }
-    except smartcar.exceptions.SmartcarException as e:
+    except smartcar.exception.SmartcarException as e:
         logger.error(f"Failed to exchange code for tokens: {e}")
         return None
     except Exception as e:
@@ -180,7 +176,7 @@ def refresh_access_token(refresh_token: str) -> Optional[dict[str, Any]]:
             "refresh_token": tokens.refresh_token,
             "expiration": datetime.utcnow() + timedelta(seconds=tokens.expires_in),
         }
-    except smartcar.exceptions.SmartcarException as e:
+    except smartcar.exception.SmartcarException as e:
         logger.error(f"Failed to refresh token: {e}")
         return None
     except Exception as e:
@@ -201,7 +197,7 @@ def get_vehicles_for_token(access_token: str) -> list[str]:
     try:
         response = smartcar.get_vehicles(access_token)
         return response.vehicles
-    except smartcar.exceptions.SmartcarException as e:
+    except smartcar.exception.SmartcarException as e:
         logger.error(f"Failed to get vehicles: {e}")
         return []
     except Exception as e:
@@ -263,44 +259,11 @@ def get_vehicle_info(
             "model": attributes.model,
             "year": attributes.year,
         }
-    except smartcar.exceptions.SmartcarException as e:
+    except smartcar.exception.SmartcarException as e:
         logger.warning(f"Failed to get vehicle info: {e}")
         return None
     except Exception as e:
         logger.error(f"Unexpected error getting vehicle info: {e}")
-        return None
-
-
-def get_vehicle_location(
-    access_token: str,
-    vehicle_id: str,
-) -> Optional[VehicleLocation]:
-    """
-    Get current vehicle location.
-
-    Args:
-        access_token: Valid access token.
-        vehicle_id: Smartcar vehicle ID.
-
-    Returns:
-        VehicleLocation or None on error.
-    """
-    vehicle = _get_smartcar_vehicle(access_token, vehicle_id)
-    if not vehicle:
-        return None
-
-    try:
-        location = vehicle.location()
-        return VehicleLocation(
-            latitude=location.latitude,
-            longitude=location.longitude,
-            timestamp=datetime.utcnow(),
-        )
-    except smartcar.exceptions.SmartcarException as e:
-        logger.warning(f"Failed to get vehicle location: {e}")
-        return None
-    except Exception as e:
-        logger.error(f"Unexpected error getting location: {e}")
         return None
 
 
@@ -328,7 +291,7 @@ def get_vehicle_odometer(
             distance=odometer.distance,
             timestamp=datetime.utcnow(),
         )
-    except smartcar.exceptions.SmartcarException as e:
+    except smartcar.exception.SmartcarException as e:
         logger.warning(f"Failed to get odometer: {e}")
         return None
     except Exception as e:
@@ -361,7 +324,7 @@ def get_vehicle_fuel(
             amount_remaining=getattr(fuel, "amount_remaining", None),
             range=getattr(fuel, "range", None),
         )
-    except smartcar.exceptions.SmartcarException as e:
+    except smartcar.exception.SmartcarException as e:
         # Fuel may not be available for EVs
         logger.debug(f"Fuel data not available: {e}")
         return None
@@ -394,46 +357,12 @@ def get_vehicle_battery(
             percent_remaining=battery.percent_remaining,
             range=getattr(battery, "range", None),
         )
-    except smartcar.exceptions.SmartcarException as e:
+    except smartcar.exception.SmartcarException as e:
         # Battery may not be available for non-EVs
         logger.debug(f"Battery data not available: {e}")
         return None
     except Exception as e:
         logger.error(f"Unexpected error getting battery: {e}")
-        return None
-
-
-def get_tire_pressure(
-    access_token: str,
-    vehicle_id: str,
-) -> Optional[TirePressure]:
-    """
-    Get vehicle tire pressure readings.
-
-    Args:
-        access_token: Valid access token.
-        vehicle_id: Smartcar vehicle ID.
-
-    Returns:
-        TirePressure or None on error.
-    """
-    vehicle = _get_smartcar_vehicle(access_token, vehicle_id)
-    if not vehicle:
-        return None
-
-    try:
-        tires = vehicle.tire_pressure()
-        return TirePressure(
-            front_left=getattr(tires, "front_left", None),
-            front_right=getattr(tires, "front_right", None),
-            rear_left=getattr(tires, "rear_left", None),
-            rear_right=getattr(tires, "rear_right", None),
-        )
-    except smartcar.exceptions.SmartcarException as e:
-        logger.warning(f"Failed to get tire pressure: {e}")
-        return None
-    except Exception as e:
-        logger.error(f"Unexpected error getting tire pressure: {e}")
         return None
 
 
@@ -461,7 +390,7 @@ def lock_vehicle(access_token: str, vehicle_id: str) -> bool:
         vehicle.lock()
         logger.info(f"Vehicle {vehicle_id} locked successfully")
         return True
-    except smartcar.exceptions.SmartcarException as e:
+    except smartcar.exception.SmartcarException as e:
         logger.error(f"Failed to lock vehicle: {e}")
         return False
     except Exception as e:
@@ -488,7 +417,7 @@ def unlock_vehicle(access_token: str, vehicle_id: str) -> bool:
         vehicle.unlock()
         logger.info(f"Vehicle {vehicle_id} unlocked successfully")
         return True
-    except smartcar.exceptions.SmartcarException as e:
+    except smartcar.exception.SmartcarException as e:
         logger.error(f"Failed to unlock vehicle: {e}")
         return False
     except Exception as e:
@@ -520,11 +449,9 @@ def get_comprehensive_vehicle_data(
     """
     # Create partial functions for each data type
     data_fetchers: dict[str, Callable[[], Any]] = {
-        "location": partial(get_vehicle_location, access_token, vehicle_id),
         "odometer": partial(get_vehicle_odometer, access_token, vehicle_id),
         "fuel": partial(get_vehicle_fuel, access_token, vehicle_id),
         "battery": partial(get_vehicle_battery, access_token, vehicle_id),
-        "tire_pressure": partial(get_tire_pressure, access_token, vehicle_id),
     }
 
     # Fetch all data (None values are acceptable)
@@ -537,11 +464,9 @@ def get_comprehensive_vehicle_data(
 
     return VehicleData(
         vehicle_id=vehicle_id,
-        location=data["location"],
         odometer=data["odometer"],
         fuel=data["fuel"],
         battery=data["battery"],
-        tire_pressure=data["tire_pressure"],
         timestamp=datetime.utcnow(),
     )
 
@@ -568,7 +493,7 @@ def ensure_valid_token(vehicle: Vehicle) -> Optional[dict[str, Any]]:
     # Check if token is expired or will expire soon (5 min buffer)
     if vehicle.tokens.expiration:
         buffer = timedelta(minutes=5)
-        if datetime.utcnow() + buffer < vehicle.tokens.expiration:
+        if datetime.now(timezone.utc) + buffer < vehicle.tokens.expiration:
             # Token is still valid
             return None
 
