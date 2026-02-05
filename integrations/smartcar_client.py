@@ -319,8 +319,10 @@ def get_vehicle_fuel(
 
     try:
         fuel = vehicle.fuel()
+        # Smartcar returns percent as decimal (0-1), convert to percentage (0-100)
+        percent = fuel.percent_remaining * 100 if fuel.percent_remaining is not None else None
         return VehicleFuel(
-            percent_remaining=fuel.percent_remaining,
+            percent_remaining=percent,
             amount_remaining=getattr(fuel, "amount_remaining", None),
             range=getattr(fuel, "range", None),
         )
@@ -353,8 +355,10 @@ def get_vehicle_battery(
 
     try:
         battery = vehicle.battery()
+        # Smartcar returns percent as decimal (0-1), convert to percentage (0-100)
+        percent = battery.percent_remaining * 100 if battery.percent_remaining is not None else None
         return VehicleBattery(
-            percent_remaining=battery.percent_remaining,
+            percent_remaining=percent,
             range=getattr(battery, "range", None),
         )
     except smartcar.exception.SmartcarException as e:

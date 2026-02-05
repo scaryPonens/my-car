@@ -78,7 +78,7 @@ Current context will be provided in the user message, including vehicle informat
 
 def call_openai(
     messages: list[dict[str, str]],
-    model: str = "gpt-4-turbo-preview",
+    model: str = "gpt-4o",
 ) -> Optional[str]:
     """
     Call OpenAI's API.
